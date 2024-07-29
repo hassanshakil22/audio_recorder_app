@@ -9,8 +9,7 @@ class AudioplayerView extends StatefulWidget {
 }
 
 class _AudioplayerViewState extends State<AudioplayerView> {
-  // Audio player vars
-  final audioPlayer = AudioPlayer();
+  final AudioPlayer audioPlayer = AudioPlayer();
   bool isPlaying = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
@@ -26,28 +25,36 @@ class _AudioplayerViewState extends State<AudioplayerView> {
     super.initState();
 
     audioPlayer.onPlayerStateChanged.listen((state) {
-      setState(() {
-        isPlaying = state == PlayerState.playing;
-      });
+      if (mounted) {
+        setState(() {
+          isPlaying = state == PlayerState.playing;
+        });
+      }
     });
 
     audioPlayer.onDurationChanged.listen((newDuration) {
-      setState(() {
-        _duration = newDuration;
-      });
+      if (mounted) {
+        setState(() {
+          _duration = newDuration;
+        });
+      }
     });
 
     audioPlayer.onPositionChanged.listen((newPosition) {
-      setState(() {
-        _position = newPosition;
-      });
+      if (mounted) {
+        setState(() {
+          _position = newPosition;
+        });
+      }
     });
 
     audioPlayer.onPlayerComplete.listen((event) {
-      setState(() {
-        _position = Duration.zero;
-        isPlaying = false;
-      });
+      if (mounted) {
+        setState(() {
+          _position = Duration.zero;
+          isPlaying = false;
+        });
+      }
     });
   }
 

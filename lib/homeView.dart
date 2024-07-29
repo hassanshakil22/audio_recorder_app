@@ -17,32 +17,52 @@ class Homeview extends StatefulWidget {
 String formatDuration(Duration duration) {
   String minutes = duration.inMinutes.remainder(60).toString().padLeft(2, "0");
   String seconds = duration.inSeconds.remainder(60).toString().padLeft(2, "0");
-  String miliseconds =
+  String milliseconds =
       duration.inMilliseconds.remainder(100).toString().padLeft(2, "0");
-  return "$minutes:$seconds:$miliseconds";
+  return "$minutes:$seconds:$milliseconds";
 }
 
 class _HomeviewState extends State<Homeview> {
   String? pathToAudio;
   FlutterSoundRecorder recorder = FlutterSoundRecorder();
   String timerText = "00:00:00";
-  bool isRecorderReady = true;
+  bool isRecorderReady = false;
 
   Future start() async {
     if (!isRecorderReady) return;
-    await recorder.startRecorder(toFile: 'audio');
+
+    final directory = await getTemporaryDirectory();
+    final audioFilePath = path.join(directory.path, 'audio.wav');
+
+    try {
+      await recorder.startRecorder(toFile: audioFilePath);
+      setState(() {
+        pathToAudio = audioFilePath;
+      });
+      print("Recording started: $audioFilePath");
+    } catch (e) {
+      print("Error starting recorder: $e");
+    }
   }
 
   Future stop() async {
     if (!isRecorderReady) return;
 
-    final path = await recorder.stopRecorder();
-    final audiofile = File(path!);
-    print("recorded Audio : $audiofile");
+    try {
+      await recorder.stopRecorder();
+      if (pathToAudio != null) {
+        final audiofile = File(pathToAudio!);
+        print("Recorded Audio: $audiofile");
+      } else {
+        print("Recorder stopped but path is null");
+      }
+    } catch (e) {
+      print("Error stopping recorder: $e");
+    }
   }
 
   @override
-  dispose() {
+  void dispose() {
     recorder.closeRecorder();
     super.dispose();
   }
@@ -51,15 +71,15 @@ class _HomeviewState extends State<Homeview> {
     final status = await Permission.microphone.request();
 
     if (status != PermissionStatus.granted) {
-      throw "MicroPhone permissions denied";
+      throw "Microphone permissions denied";
     }
 
-    recorder.openRecorder();
+    await recorder.openRecorder();
+    setState(() {
+      isRecorderReady = true;
+    });
 
     recorder.setSubscriptionDuration(const Duration(milliseconds: 1));
-
-    // final directory = await getExternalStorageDirectory();
-    // pathToAudio = path.join(directory!.path, "temp.wav");
   }
 
   @override
@@ -99,11 +119,10 @@ class _HomeviewState extends State<Homeview> {
                 onPressed: () async {
                   if (recorder.isRecording) {
                     await stop();
-                    setState(() {});
                   } else {
                     await start();
-                    setState(() {});
                   }
+                  setState(() {});
                 },
                 icon: Icon(recorder.isRecording ? Icons.stop : Icons.mic),
                 iconSize: 80,
@@ -111,13 +130,11 @@ class _HomeviewState extends State<Homeview> {
             ],
           ),
           ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const AudioplayerView()));
+              onPressed: () async {
+                await Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => AudioplayerView()));
               },
-              child: Text("go to audios"))
+              child: const Text("Go to Audios"))
         ],
       ),
     );
