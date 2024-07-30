@@ -45,7 +45,7 @@ class _AudioplayerViewState extends State<AudioplayerView> {
 
     player.durationStream.listen((d) {
       setState(() {
-        _duration = d!;
+        _duration = d ?? Duration.zero;
       });
     });
 
@@ -81,7 +81,10 @@ class _AudioplayerViewState extends State<AudioplayerView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Audio Player')),
+      backgroundColor: Colors.brown.shade300,
+      appBar: AppBar(
+          title: const Text('Audio Player'),
+          backgroundColor: Colors.brown.shade500),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10.0),
         child: Column(
@@ -92,12 +95,51 @@ class _AudioplayerViewState extends State<AudioplayerView> {
                 itemCount: audioFiles.length,
                 itemBuilder: (context, index) {
                   final audioFile = audioFiles[index];
-                  return ListTile(
-                      title: Text(path.basename(audioFile.path)), onTap: () {});
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2.0),
+                    child: ListTile(
+                      title: Text(
+                        path.basename(audioFile.path),
+                        style: TextStyle(color: Colors.black),
+                      ),
+                      trailing: IconButton(
+                          onPressed: () async {
+                            print("Deleting file: ${audioFile.path}");
+                            try {
+                              await audioFile.delete();
+                              await fetchAudioFiles();
+                            } catch (e) {
+                              print("error deleting file : $e");
+                            }
+                          },
+                          icon: Icon(
+                            Icons.delete,
+                            color: Colors.brown.shade800,
+                          )),
+                      tileColor: Colors.brown.shade200,
+                      onTap: () async {
+                        print(
+                            "Attempting to play audio file: ${audioFile.path}");
+
+                        try {
+                          await player.stop();
+
+                          await player.setFilePath(audioFile.path);
+                          player.play();
+
+                          print("Playback started.");
+                        } catch (e, stackTrace) {
+                          print("Error playing audio file: $e");
+                          print("Stack trace: $stackTrace");
+                        }
+                      },
+                    ),
+                  );
                 },
               ),
             ),
             Slider(
+                activeColor: Colors.brown.shade500,
                 value: _position.inSeconds.toDouble(),
                 min: 0,
                 max: _duration.inSeconds.toDouble(),
@@ -105,16 +147,27 @@ class _AudioplayerViewState extends State<AudioplayerView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(formatDuration(_position)),
-                Text(formatDuration(_duration)),
+                Text(
+                  formatDuration(_position),
+                  style: const TextStyle(color: Colors.black),
+                ),
+                Text(
+                  formatDuration(_duration),
+                  style: const TextStyle(color: Colors.black),
+                ),
               ],
             ),
             CircleAvatar(
               radius: 30,
+              backgroundColor: Colors.brown.shade600,
+              foregroundColor: Colors.brown.shade200,
               child: IconButton(
                   icon: Icon(player.playing ? Icons.pause : Icons.play_arrow),
                   iconSize: 30,
                   onPressed: handlePlayPause),
+            ),
+            const SizedBox(
+              height: 10,
             ),
           ],
         ),

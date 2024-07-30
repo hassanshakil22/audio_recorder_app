@@ -1,4 +1,3 @@
-import 'package:audioplayers/audioplayers.dart';
 import 'package:audiorecorder_app/audioPlayerView.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +40,9 @@ class _HomeviewState extends State<Homeview> {
         'audio_${DateTime.now().millisecondsSinceEpoch}.wav');
 
     try {
-      await recorder.startRecorder(toFile: audioFilePath);
+      await recorder.startRecorder(
+        toFile: audioFilePath,
+      );
       setState(() {
         pathToAudio = audioFilePath;
       });
