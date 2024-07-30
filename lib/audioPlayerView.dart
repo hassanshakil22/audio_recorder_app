@@ -17,11 +17,11 @@ class _AudioplayerViewState extends State<AudioplayerView> {
   Duration _position = Duration.zero;
   List<File> audioFiles = [];
 
-  void handlePlayPause() {
+  Future<void> handlePlayPause() async {
     if (player.playing) {
-      player.pause();
+      await player.pause();
     } else {
-      player.play();
+      await player.play();
     }
   }
 
@@ -60,7 +60,7 @@ class _AudioplayerViewState extends State<AudioplayerView> {
     });
   }
 
-  Future fetchAudioFiles() async {
+  Future<void> fetchAudioFiles() async {
     final directory = await getApplicationDocumentsDirectory();
     final recordingsDir = Directory(path.join(directory.path, 'recordings'));
     if (await recordingsDir.exists()) {
@@ -78,100 +78,122 @@ class _AudioplayerViewState extends State<AudioplayerView> {
     return "$minutes:$seconds";
   }
 
+  Future<void> _handleBackNavigation() async {
+    await player.stop();
+    await player.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.brown.shade300,
-      appBar: AppBar(
+    return WillPopScope(
+      onWillPop: () async {
+        await _handleBackNavigation();
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.brown.shade300,
+        appBar: AppBar(
           title: const Text('Audio Player'),
-          backgroundColor: Colors.brown.shade500),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Expanded(
-              child: ListView.builder(
-                itemCount: audioFiles.length,
-                itemBuilder: (context, index) {
-                  final audioFile = audioFiles[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2.0),
-                    child: ListTile(
-                      title: Text(
-                        path.basename(audioFile.path),
-                        style: TextStyle(color: Colors.black),
-                      ),
-                      trailing: IconButton(
+          backgroundColor: Colors.brown.shade500,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  itemCount: audioFiles.length,
+                  itemBuilder: (context, index) {
+                    final audioFile = audioFiles[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: ListTile(
+                        title: Text(
+                          path.basename(audioFile.path),
+                          style: TextStyle(color: Colors.black),
+                        ),
+                        trailing: IconButton(
                           onPressed: () async {
                             print("Deleting file: ${audioFile.path}");
                             try {
                               await audioFile.delete();
                               await fetchAudioFiles();
                             } catch (e) {
-                              print("error deleting file : $e");
+                              print("Error deleting file : $e");
                             }
                           },
                           icon: Icon(
                             Icons.delete,
                             color: Colors.brown.shade800,
-                          )),
-                      tileColor: Colors.brown.shade200,
-                      onTap: () async {
-                        print(
-                            "Attempting to play audio file: ${audioFile.path}");
-
-                        try {
-                          await player.stop();
-
-                          await player.setFilePath(audioFile.path);
-                          player.play();
-
-                          print("Playback started.");
-                        } catch (e, stackTrace) {
-                          print("Error playing audio file: $e");
-                          print("Stack trace: $stackTrace");
-                        }
-                      },
-                    ),
-                  );
-                },
+                          ),
+                        ),
+                        tileColor: Colors.brown.shade200,
+                        onTap: () async {
+                          if (await audioFile.exists() &&
+                              audioFile.lengthSync() > 0) {
+                            try {
+                              await player.stop();
+                              await player.setFilePath(audioFile.path);
+                              await player.play();
+                              print("Playback started.");
+                            } catch (e, stackTrace) {
+                              print("Error playing audio file: $e");
+                              print("Stack trace: $stackTrace");
+                            }
+                          } else {
+                            print(
+                              "Audio file does not exist or is inaccessible: ${audioFile.path}",
+                            );
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            Slider(
+              Slider(
                 activeColor: Colors.brown.shade500,
                 value: _position.inSeconds.toDouble(),
                 min: 0,
                 max: _duration.inSeconds.toDouble(),
-                onChanged: handleSeek),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  formatDuration(_position),
-                  style: const TextStyle(color: Colors.black),
-                ),
-                Text(
-                  formatDuration(_duration),
-                  style: const TextStyle(color: Colors.black),
-                ),
-              ],
-            ),
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: Colors.brown.shade600,
-              foregroundColor: Colors.brown.shade200,
-              child: IconButton(
+                onChanged: handleSeek,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    formatDuration(_position),
+                    style: const TextStyle(color: Colors.black),
+                  ),
+                  Text(
+                    formatDuration(_duration),
+                    style: const TextStyle(color: Colors.black),
+                  ),
+                ],
+              ),
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: Colors.brown.shade600,
+                foregroundColor: Colors.brown.shade200,
+                child: IconButton(
                   icon: Icon(player.playing ? Icons.pause : Icons.play_arrow),
                   iconSize: 30,
-                  onPressed: handlePlayPause),
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-          ],
+                  onPressed: handlePlayPause,
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    player.stop();
+    player.dispose();
+    super.dispose();
   }
 }

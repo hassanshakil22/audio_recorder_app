@@ -1,5 +1,6 @@
 import 'package:audiorecorder_app/audioPlayerView.dart';
 import 'package:audiorecorder_app/homeView.dart';
+import 'package:audiorecorder_app/splashView.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -14,7 +15,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
         title: 'Flutter Demo',
-        home: const Homeview(),
+        home: const SplashView(),
         // debugShowCheckedModeBanner: false,
         theme: ThemeData());
   }

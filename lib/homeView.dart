@@ -100,8 +100,14 @@ class _HomeviewState extends State<Homeview> {
     return Scaffold(
       backgroundColor: Colors.brown.shade300,
       appBar: AppBar(
-        title: const Text("Audio Recorder App"),
-        backgroundColor: Colors.brown.shade500,
+        title: Text(
+          "Mr. Mic",
+          style: TextStyle(color: Colors.brown.shade300),
+        ),
+        centerTitle: true,
+        leading: Image.asset(
+            'C:/Users/HP/Desktop/apps/audiorecorder_app/lib/assets/homeAppbar.png'),
+        backgroundColor: const Color(0xFfd9d9d9),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -138,8 +144,15 @@ class _HomeviewState extends State<Homeview> {
           ),
           ElevatedButton(
               onPressed: () async {
-                await Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => AudioplayerView()));
+                if (!recorder.isRecording) {
+                  await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => AudioplayerView()));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text("please stop your recording first")));
+                }
               },
               child: const Text("Go to Audios"))
         ],
