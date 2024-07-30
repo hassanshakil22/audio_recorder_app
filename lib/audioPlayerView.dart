@@ -1,5 +1,8 @@
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:path/path.dart' as path;
 
 class AudioplayerView extends StatefulWidget {
   const AudioplayerView({super.key});
@@ -9,53 +12,63 @@ class AudioplayerView extends StatefulWidget {
 }
 
 class _AudioplayerViewState extends State<AudioplayerView> {
-  final AudioPlayer audioPlayer = AudioPlayer();
-  bool isPlaying = false;
+  final AudioPlayer player = AudioPlayer();
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
+  List<File> audioFiles = [];
 
-  @override
-  void dispose() {
-    audioPlayer.dispose();
-    super.dispose();
+  void handlePlayPause() {
+    if (player.playing) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }
+
+  void handleSeek(double value) {
+    player.seek(Duration(seconds: value.toInt()));
   }
 
   @override
   void initState() {
     super.initState();
+    fetchAudioFiles();
 
-    audioPlayer.onPlayerStateChanged.listen((state) {
-      if (mounted) {
-        setState(() {
-          isPlaying = state == PlayerState.playing;
-        });
-      }
+    player.setUrl(
+        'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+
+    player.positionStream.listen((p) {
+      setState(() {
+        _position = p;
+      });
     });
 
-    audioPlayer.onDurationChanged.listen((newDuration) {
-      if (mounted) {
-        setState(() {
-          _duration = newDuration;
-        });
-      }
+    player.durationStream.listen((d) {
+      setState(() {
+        _duration = d!;
+      });
     });
 
-    audioPlayer.onPositionChanged.listen((newPosition) {
-      if (mounted) {
-        setState(() {
-          _position = newPosition;
-        });
-      }
-    });
-
-    audioPlayer.onPlayerComplete.listen((event) {
-      if (mounted) {
+    player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
         setState(() {
           _position = Duration.zero;
-          isPlaying = false;
         });
+        player.pause();
+        player.seek(_position);
       }
     });
+  }
+
+  Future fetchAudioFiles() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final recordingsDir = Directory(path.join(directory.path, 'recordings'));
+    if (await recordingsDir.exists()) {
+      final files = recordingsDir.listSync();
+      setState(() {
+        audioFiles = files.whereType<File>().toList();
+      });
+    }
   }
 
   String formatDuration(Duration duration) {
@@ -74,16 +87,21 @@ class _AudioplayerViewState extends State<AudioplayerView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Slider(
-              value: _position.inSeconds.toDouble(),
-              min: 0,
-              max: _duration.inSeconds.toDouble(),
-              onChanged: (value) async {
-                final newPosition = Duration(seconds: value.toInt());
-                await audioPlayer.seek(newPosition);
-                await audioPlayer.resume();
-              },
+            Expanded(
+              child: ListView.builder(
+                itemCount: audioFiles.length,
+                itemBuilder: (context, index) {
+                  final audioFile = audioFiles[index];
+                  return ListTile(
+                      title: Text(path.basename(audioFile.path)), onTap: () {});
+                },
+              ),
             ),
+            Slider(
+                value: _position.inSeconds.toDouble(),
+                min: 0,
+                max: _duration.inSeconds.toDouble(),
+                onChanged: handleSeek),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -94,26 +112,10 @@ class _AudioplayerViewState extends State<AudioplayerView> {
             CircleAvatar(
               radius: 30,
               child: IconButton(
-                icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                iconSize: 30,
-                onPressed: () async {
-                  if (isPlaying) {
-                    try {
-                      await audioPlayer.pause();
-                      print('Audio paused');
-                    } catch (e) {
-                      print('Error pausing audio: $e');
-                    }
-                  } else {
-                    try {
-                      await audioPlayer.resume();
-                    } catch (e) {
-                      print('Error playing audio: $e');
-                    }
-                  }
-                },
-              ),
-            )
+                  icon: Icon(player.playing ? Icons.pause : Icons.play_arrow),
+                  iconSize: 30,
+                  onPressed: handlePlayPause),
+            ),
           ],
         ),
       ),
