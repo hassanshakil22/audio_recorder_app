@@ -16,6 +16,7 @@ class _AudioplayerViewState extends State<AudioplayerView> {
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
   List<File> audioFiles = [];
+  bool _isDisposing = false; // Flag to prevent multiple disposals
 
   Future<void> handlePlayPause() async {
     if (player.playing) {
@@ -34,22 +35,29 @@ class _AudioplayerViewState extends State<AudioplayerView> {
     super.initState();
     fetchAudioFiles();
 
-    player.setUrl(
-        'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+    player
+        .setAudioSource(AudioSource.uri(Uri.parse(
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3')))
+        .catchError((e) {
+      print("Error setting audio source: $e");
+    });
 
     player.positionStream.listen((p) {
+      if (!mounted) return;
       setState(() {
         _position = p;
       });
     });
 
     player.durationStream.listen((d) {
+      if (!mounted) return;
       setState(() {
         _duration = d ?? Duration.zero;
       });
     });
 
     player.playerStateStream.listen((state) {
+      if (!mounted) return;
       if (state.processingState == ProcessingState.completed) {
         setState(() {
           _position = Duration.zero;
@@ -79,8 +87,20 @@ class _AudioplayerViewState extends State<AudioplayerView> {
   }
 
   Future<void> _handleBackNavigation() async {
-    await player.stop();
-    await player.dispose();
+    if (_isDisposing) return; // Prevent multiple disposals
+    _isDisposing = true;
+    try {
+      print("Stopping player...");
+      await player.stop();
+      print("Disposing player...");
+      await player.dispose();
+      print("Player stopped and disposed.");
+    } catch (e, stackTrace) {
+      print("Error during back navigation: $e");
+      print("Stack trace: $stackTrace");
+    } finally {
+      _isDisposing = false; // Reset flag
+    }
   }
 
   @override
@@ -130,11 +150,15 @@ class _AudioplayerViewState extends State<AudioplayerView> {
                         ),
                         tileColor: Colors.brown.shade200,
                         onTap: () async {
+                          print("Tapping on file: ${audioFile.path}");
                           if (await audioFile.exists() &&
                               audioFile.lengthSync() > 0) {
                             try {
+                              print("Stopping player...");
                               await player.stop();
+                              print("Setting file path...");
                               await player.setFilePath(audioFile.path);
+                              print("Playing audio...");
                               await player.play();
                               print("Playback started.");
                             } catch (e, stackTrace) {
@@ -143,8 +167,7 @@ class _AudioplayerViewState extends State<AudioplayerView> {
                             }
                           } else {
                             print(
-                              "Audio file does not exist or is inaccessible: ${audioFile.path}",
-                            );
+                                "Audio file does not exist or is inaccessible: ${audioFile.path}");
                           }
                         },
                       ),
@@ -192,8 +215,9 @@ class _AudioplayerViewState extends State<AudioplayerView> {
 
   @override
   void dispose() {
-    player.stop();
-    player.dispose();
+    if (!_isDisposing) {
+      _handleBackNavigation(); // Ensure disposal is handled
+    }
     super.dispose();
   }
 }

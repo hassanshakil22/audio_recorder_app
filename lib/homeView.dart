@@ -30,6 +30,8 @@ class _HomeviewState extends State<Homeview> {
   Future start() async {
     if (!isRecorderReady) return;
 
+//creation of directory to store audio
+
     final directory = await getApplicationDocumentsDirectory();
     final recordingsDir = Directory(
         path.join(directory.path, 'recordings')); //creating a directory
@@ -38,13 +40,14 @@ class _HomeviewState extends State<Homeview> {
     }
     final audioFilePath = path.join(recordingsDir.path,
         'audio_${DateTime.now().millisecondsSinceEpoch}.wav');
-
+//start code
     try {
       await recorder.startRecorder(
         toFile: audioFilePath,
       );
       setState(() {
-        pathToAudio = audioFilePath;
+        pathToAudio =
+            audioFilePath; //assigning the audiofukepath to pathtoaudio as pathtoaudio is a global variable
       });
       print("Recording started: $audioFilePath");
     } catch (e) {

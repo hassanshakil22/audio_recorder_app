@@ -1,5 +1,3 @@
-import 'package:audiorecorder_app/audioPlayerView.dart';
-import 'package:audiorecorder_app/homeView.dart';
 import 'package:audiorecorder_app/splashView.dart';
 import 'package:flutter/material.dart';
 
